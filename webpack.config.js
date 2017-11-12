@@ -3,30 +3,27 @@ const globule = require('globule')
 const _ = require('lodash')
 
 const ExtractTextPlugin = require('extract-text-webpack-plugin')
-const HtmlWebpackPlugin = require('html-webpack-plugin')
 
 const srcDir = path.join(__dirname, 'src')
 const destDir = path.join(__dirname, 'public')
 
-const jsFiles = _(globule.find(['**/*.js', '!**/_*.js'], {cwd: srcDir}))
-  .map((filename) => [filename.replace(/\.js$/, ''), path.join(srcDir, filename)])
+const files = _(['js', 'sass', 'pug'])
+  .map((extname) => {
+    return [
+      extname,
+      _(globule.find([`**/*.${extname}`, `!**/_*.${extname}`], {cwd: srcDir}))
+        .map((filename) => [filename.replace(new RegExp(`.${extname}$`, 'i'), ''), path.join(srcDir, filename)])
+        .fromPairs()
+        .value()
+    ]
+  })
   .fromPairs()
   .value()
-const sassFiles = _(globule.find(['**/*.sass', '!**/_*.sass'], {cwd: srcDir}))
-  .map((filename) => [filename.replace(/\.sass$/, ''), path.join(srcDir, filename)])
-  .fromPairs()
-  .value()
-const pugFiles = _(globule.find(['**/*.pug', '!**/_*.pug'], {cwd: srcDir}))
-  .map((filename) => [filename.replace(/\.pug$/, ''), path.join(srcDir, filename)])
-  .fromPairs()
-  .value()
-
-const releaseBuild = false
 
 module.exports = [
   {
     context: srcDir,
-    entry: jsFiles,
+    entry: files.js,
     output: {
       filename: '[name].js',
       path: destDir
@@ -46,7 +43,7 @@ module.exports = [
   },
   {
     context: srcDir,
-    entry: sassFiles,
+    entry: files.sass,
     output: {
       filename: '[name].css',
       path: destDir
@@ -68,7 +65,7 @@ module.exports = [
   },
   {
     context: srcDir,
-    entry: pugFiles,
+    entry: files.pug,
     output: {
       filename: '[name].html',
       path: destDir
@@ -77,15 +74,23 @@ module.exports = [
       rules: [
         {
           test: /\.pug$/,
-          loader: 'pug-loader',
-          options: {
-            pretty: !releaseBuild
-          }
+          use: ExtractTextPlugin.extract([
+            'apply-pug-loader',
+            'pug-loader',
+            'after-front-matter-loader',
+            'front-matter-loader'
+          ])
         }
       ]
     },
-    plugins: _.map(Object.values(pugFiles), (filename) => {
-      return new HtmlWebpackPlugin({template: filename, inject: false})
-    })
+    plugins: [
+      new ExtractTextPlugin('[name].html')
+    ],
+    resolveLoader: {
+      alias: {
+        'after-front-matter-loader': path.join(__dirname, 'lib/after_front_matter_loader.js'),
+        'apply-pug-loader': path.join(__dirname, 'lib/apply_pug_loader.js')
+      }
+    }
   }
 ]
