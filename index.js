@@ -1,21 +1,36 @@
 const path = require('path')
-const spawn = require('child_process').spawn
+const fs = require('fs')
+const childProcess = require('child_process')
 const sane = require('sane')
-const liveServer = require('live-server')
+
+const binDir = childProcess.spawnSync('npm', ['bin']).stdout.toString().trim()
+const webpackPath = path.join(binDir, 'webpack')
+const reloadPath = path.join(binDir, 'reload')
+
+const configPath = path.join(__dirname, 'webpack.config.js')
+
+try {
+  const userConfigPath = path.resolve('pugpack.config.js')
+  fs.accessSync(userConfigPath)
+  global.pugpack = require(userConfigPath)
+} catch (err) {
+  if (err.code !== 'ENOENT') throw err
+}
+const opts = global.pugpack || {}
+
+opts.srcDir = path.resolve(opts.srcDir || 'src')
+opts.destDir = path.resolve(opts.destDir || 'dest')
 
 var process
-function startWebpack () {
+function restartWebpack () {
   if (process) process.kill()
-  const webpackCommand = path.join(__dirname, 'node_modules/.bin/webpack')
-  process = spawn(webpackCommand, ['--watch'], {stdio: 'inherit'})
+  process = childProcess.spawn(webpackPath, ['--config', configPath, '--watch'], {stdio: 'inherit'})
 }
 
-const watcher = sane('src', {glob: '**/*.@(js|sass|pug)'})
+const watcher = sane(opts.srcDir, {glob: '**/*.@(js|sass|pug)'})
 watcher.on('ready', () => {
-  startWebpack()
-  liveServer.start({
-    root: 'dest'
-  })
+  restartWebpack()
+  childProcess.spawn(reloadPath, ['-b', '-d', opts.destDir], {stdio: 'inherit'})
 })
-watcher.on('add', startWebpack)
-watcher.on('delete', startWebpack)
+watcher.on('add', restartWebpack)
+watcher.on('delete', restartWebpack)

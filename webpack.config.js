@@ -4,15 +4,14 @@ const _ = require('lodash')
 const CopyWebpackPlugin = require('copy-webpack-plugin')
 const ExtractTextPlugin = require('extract-text-webpack-plugin')
 
-const srcDir = path.resolve('./src')
-const destDir = path.resolve('./dest')
+const opts = global.pugpack
 
 const files = _(['js', 'sass', 'pug'])
   .map((extname) => {
     return [
       extname,
-      _(globule.find([`**/*.${extname}`, `!**/_*.${extname}`], {cwd: srcDir}))
-        .map((filename) => [filename.replace(new RegExp(`.${extname}$`, 'i'), ''), path.join(srcDir, filename)])
+      _(globule.find([`**/*.${extname}`, `!**/_*.${extname}`], {cwd: opts.srcDir}))
+        .map((filename) => [filename.replace(new RegExp(`.${extname}$`, 'i'), ''), path.join(opts.srcDir, filename)])
         .fromPairs()
         .value()
     ]
@@ -22,11 +21,11 @@ const files = _(['js', 'sass', 'pug'])
 
 module.exports = [
   {
-    context: srcDir,
+    context: opts.srcDir,
     entry: files.js,
     output: {
       filename: '[name].js',
-      path: destDir
+      path: opts.destDir
     },
     module: {
       rules: [
@@ -51,11 +50,11 @@ module.exports = [
     ]
   },
   {
-    context: srcDir,
+    context: opts.srcDir,
     entry: files.sass,
     output: {
       filename: '[name].css',
-      path: destDir
+      path: opts.destDir
     },
     module: {
       rules: [
@@ -82,11 +81,11 @@ module.exports = [
     ]
   },
   {
-    context: srcDir,
+    context: opts.srcDir,
     entry: files.pug,
     output: {
       filename: '[name].html',
-      path: destDir
+      path: opts.destDir
     },
     module: {
       rules: [
