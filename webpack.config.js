@@ -1,11 +1,11 @@
 const path = require('path')
 const globule = require('globule')
 const _ = require('lodash')
-
+const CopyWebpackPlugin = require('copy-webpack-plugin')
 const ExtractTextPlugin = require('extract-text-webpack-plugin')
 
-const srcDir = path.join(__dirname, 'src')
-const destDir = path.join(__dirname, 'public')
+const srcDir = path.resolve('./src')
+const destDir = path.resolve('./dest')
 
 const files = _(['js', 'sass', 'pug'])
   .map((extname) => {
@@ -39,7 +39,16 @@ module.exports = [
           }
         }
       ]
-    }
+    },
+    plugins: [
+      new CopyWebpackPlugin([
+        {from: {glob: '**/*', dot: true}}
+      ], {
+        ignore: [
+          '*.js', '*.sass', '*.pug'
+        ]
+      })
+    ]
   },
   {
     context: srcDir,
@@ -52,10 +61,19 @@ module.exports = [
       rules: [
         {
           test: /\.sass$/,
-          use: ExtractTextPlugin.extract({
-            fallback: 'style-loader',
-            use: ['css-loader', 'sass-loader']
-          })
+          use: ExtractTextPlugin.extract([
+            'css-loader',
+            {
+              loader: 'postcss-loader',
+              options: {
+                ident: 'postcss',
+                plugins: (loader) => [
+                  require('autoprefixer')()
+                ]
+              }
+            },
+            'sass-loader'
+          ])
         }
       ]
     },
@@ -77,7 +95,7 @@ module.exports = [
           use: ExtractTextPlugin.extract([
             'apply-pug-loader',
             'pug-loader',
-            'after-front-matter-loader',
+            'save-front-matter-vars-loader',
             'front-matter-loader'
           ])
         }
@@ -88,7 +106,7 @@ module.exports = [
     ],
     resolveLoader: {
       alias: {
-        'after-front-matter-loader': path.join(__dirname, 'lib/after_front_matter_loader.js'),
+        'save-front-matter-vars-loader': path.join(__dirname, 'lib/save_front_matter_vars_loader.js'),
         'apply-pug-loader': path.join(__dirname, 'lib/apply_pug_loader.js')
       }
     }
